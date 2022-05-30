@@ -7,13 +7,13 @@ minimum_version_required = 'v0.2.1'
 
 #================================================TODO================================================
 '''
+do proper testing with the reaction request system
 update reactions in the mainloop
 create reactions and compounds data automatically
 '''
 #===============================================BUGLOG===============================================
 
 '''
-reactions do not occour when units are updated due to the inexhistance of a request
 '''
 
 #=============================================FUNCTIONS==============================================
@@ -163,7 +163,7 @@ class ReacRequest: #the request an unit sends to another to make a reaction toge
         self.reaction = reaction
 
     def __str__(self):
-        return "units: "+str(self.units)+"  accepted: "+str(self.accepted)+"  reaction: "+str(self.reaction)
+        return "units: "+str({str(unit):state for unit,state in self.units.items()})+"  accepted: "+str(self.accepted)+"  reaction: "+str(self.reaction)
 
     def close_unit(self,unit):
         self.units[unit] = True
@@ -241,11 +241,13 @@ class Unit: #the floor units where cells will be standing
                         self.rr.units[neg] = False
                 self.rr.close_unit(self)
 
+    def late_update(self):
         if self.rr:
             if random.uniform(0,100) > self.rr.reaction["probability"]:
                 self.rr.accepted = False
             if self.rr.accepted:
-                print("reaction occourred")
+                print("\n\nreaction occourred:")
+                print(self.rr)
             for unit in self.rr.units.keys():
                 unit.rr = None
         
@@ -277,6 +279,16 @@ def updateGFX():
             unit.draw(win)
     pygame.display.update()
 
+def update():
+    for row in terrain:
+        for unit in row:
+            unit.update()
+            
+def late_update():
+    for row in terrain:
+        for unit in row:
+            unit.late_update()
+
 
 print("starting the mainloop...\n\n\nTABLE OF ELEMENTS:\n")
 print_elem_list(elements)
@@ -287,6 +299,8 @@ while run:
         if event.type == pygame.QUIT:
             run = False
 
+    update()
+    late_update()
     updateGFX()
 
 print("\n\nexited the mainloop")
