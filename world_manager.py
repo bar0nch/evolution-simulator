@@ -1,63 +1,133 @@
-import pickle, json, os
+import pickle, json, os, copy, shutil
 from particle_related_classes import *
 
-def save_progress(data,dirname='world saves'):
+def save_progress(data,dirname='world saves',safe=[2,3]):
     '''
     Saves a world into a directory data structure, in the saves folder, using the variable world_data (to be put in the data parameter).
+
+    Safe parameter activates various procedures to avoid losing important data:
+        0 - no safe measures
+        1 - print the data in the console
+        2 - create a backup of the folder if possible
+        3 - in case of error prints the unsaved data
+
+    Saving the data makes the data dictionary unusable, if the dictionary needs to be used more in the code use the syntax:
+        world_data = save_progress(world_data, dirname)
     '''
-    backup_data = {i:n for i,n in data.items()}
+    if 2 in safe:
+        try:
+            shutil.copytree('saves/' + dirname, 'saves/' + dirname + ' - backup')
+        except FileNotFoundError:
+            print("a backup of the world could not be created")
+
+    backup_data = copy.deepcopy(data)
+    if 1 in safe:
+        for key, value in backup_data.items():
+            print(key)
+            print(value)
+            print()
+            
     if not os.path.exists('saves/'+dirname): #makes the world folder
         os.makedirs('saves/'+dirname)
 
-    V_file = open('saves/'+dirname+'/version.txt','w') #saves the version in txt format
-    V_file.write(data["version"])
-    V_file.close()
-    data.pop("version")
+    safe_test = True
+    try:
+        V_file = open('saves/'+dirname+'/version.txt','w') #saves the version in txt format
+        V_file.write(data["version"])
+        V_file.close()
+        data.pop("version")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
 
-    elems_file = open('saves/'+dirname+'/elements.json','w') #saves the element list in json format
-    data["elements"] = [elem.lean_form for elem in data["elements"]] #converts everything into lean form
-    elems_file.write(json.dumps(data["elements"]))
-    elems_file.close()
-    data.pop("elements")
+    try:
+        elems_file = open('saves/'+dirname+'/elements.json','w') #saves the element list in json format
+        data["elements"] = [elem.lean_form for elem in data["elements"]] #converts everything into lean form
+        elems_file.write(json.dumps(data["elements"]))
+        elems_file.close()
+        data.pop("elements")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
 
-    comps_file = open('saves/'+dirname+'/compounds.json','w') #saves the compound list in json format
-    if data["compounds"]:
-        data["compounds"] = [comp.lean_form for comp in data["compounds"]] #converts everything into lean form
-    comps_file.write(json.dumps(data["compounds"]))
-    comps_file.close()
-    data.pop("compounds")
+    try:
+        comps_file = open('saves/'+dirname+'/compounds.json','w') #saves the compound list in json format
+        if data["compounds"]:
+            data["compounds"] = [comp.lean_form for comp in data["compounds"]] #converts everything into lean form
+        comps_file.write(json.dumps(data["compounds"]))
+        comps_file.close()
+        data.pop("compounds")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
 
-    reacs_file = open('saves/'+dirname+'/reactions.json','w') #saves the reaction list in json format
-    if data["reactions"]:
-        for reac in data["reactions"]:
-            for prod in reac["product"]: #prod is in form of [int,compound in lean form]
-                prod[1] = prod[1].lean_form
-    reacs_file.write(json.dumps(data["reactions"]))
-    reacs_file.close()
-    data.pop("reactions")
+    try:
+        reacs_file = open('saves/'+dirname+'/reactions.json','w') #saves the reaction list in json format
+        if data["reactions"]:
+            for reac in data["reactions"]:
+                for prod in reac["product"]: #prod is in form of [int,compound in lean form]
+                    prod[1] = prod[1].lean_form
+                for req in reac["requirements"]: #req too
+                    req[1] = req[1].lean_form
+        reacs_file.write(json.dumps(data["reactions"]))
+        reacs_file.close()
+        data.pop("reactions")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
 
-    ratios_file = open('saves/'+dirname+'/ratios.json','w') #saves the ratios list in json format
-    if data["ratios"]:
-        data["ratios"] = [[val,key.lean_form] for key, val in data["ratios"].items()]
-    ratios_file.write(json.dumps(data["ratios"]))
-    ratios_file.close()
-    data.pop("ratios")
+    try:
+        ratios_file = open('saves/'+dirname+'/ratios.json','w') #saves the ratios list in json format
+        data["ratios"] = [[rt[0],rt[1].lean_form] for rt in data["ratios"]]
+        ratios_file.write(json.dumps(data["ratios"]))
+        ratios_file.close()
+        data.pop("ratios")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
 
-    terrain_file = open('saves/'+dirname+'/terrain.json','w') #saves the world matrix in json format
-    if data["world"]:
-        for row,particles in enumerate(data["world"]):
-            for col,particle in enumerate(particles):
-                data["world"][row][col] = particle.lean_form
-    terrain_file.write(json.dumps(data["world"]))
-    terrain_file.close()
-    data.pop("world")
+    try:
+        terrain_file = open('saves/'+dirname+'/terrain.json','w') #saves the world matrix in json format
+        if data["world"]:
+            for row,particles in enumerate(data["world"]):
+                for col,particle in enumerate(particles):
+                    data["world"][row][col] = particle.lean_form
+        terrain_file.write(json.dumps(data["world"]))
+        terrain_file.close()
+        data.pop("world")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
+
+    try:
+        temperature_file = open('saves/'+dirname+'/temperatures.json','w') #saves the temperature matrix in json format
+        temperature_file.write(json.dumps(data["temperature"]))
+        temperature_file.close()
+        data.pop("temperature")
+        safe_test = False
+    finally:
+        if 3 in safe and safe_test:
+            print(data)
+        safe_test = True
 
     save_file = open('saves/'+dirname+'/general data.p','wb') #saves the rest with pickle
     pickle.dump(data,save_file)
     save_file.close()
 
-    world_data = {i:n for i,n in backup_data.keys()}
     print("\n\nsaved progress in: saves/"+dirname+"\n\n")
+    return backup_data
 
 def load_progress(dirname='world saves'):
     '''
@@ -91,6 +161,8 @@ def load_progress(dirname='world saves'):
         for reac in data["reactions"]:
             for prod in reac["product"]: #prod is in form of [int,compound in lean form]
                 prod[1] = make_particle(prod[1],data["elements"],data["compounds"])
+            for req in reac["requirements"]:
+                req[1] = make_particle(req[1],data["elements"],data["compounds"])
     else:
         print('warning: the reactions list is missing')
 
@@ -100,7 +172,7 @@ def load_progress(dirname='world saves'):
     if data["ratios"]: #converts the colors of the compounds in tuples and converts the ratio list into a dict {particle:amount}
         for ratio in data["ratios"]:
             ratio[1]["color"] = tuple(ratio[1]["color"])
-        data["ratios"] = {make_particle(ratio[1],data["elements"],data["compounds"]):ratio[0] for ratio in data["ratios"]}
+        data["ratios"] = [[ratio[0], make_particle(ratio[1],data["elements"],data["compounds"])] for ratio in data["ratios"]]
     else:
         print('warning: the ratio list is missing')
 
@@ -113,6 +185,10 @@ def load_progress(dirname='world saves'):
                 data["world"][row][col] = make_particle(particle,data["elements"],data["compounds"])
     else:
         print('warning: the world matrix is missing')
+
+    temperature_file = open('saves/'+dirname+'/temperatures.json','r') #loads the temperature matrix
+    data["temperature"] = json.loads(temperature_file.read())
+    temperature_file.close()
 
     print("\n\nloaded progress from: saves/"+dirname+" in version "+data["version"]+"\n\n")
     return data
