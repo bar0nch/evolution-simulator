@@ -13,15 +13,16 @@ def y_in_curve_for_x(x, curveY_eq=perc_curveY):
     return eval(curveY_eq,{"x":x})
 
 
-def create_element_list(names, shorthands, colors):
+def create_element_list(names, shorthands, colors, melting_points):
     global element_perc_affinity
     
-    elements = [{"name":names[0], "shorthand":shorthands[0], "color":colors[0], "perc num":0}] #first element getting called
-                                                                                               #in the loop by [i-1]
+    #first element getting called in the loop by [i-1]
+    elements = [{"name":names[0], "shorthand":shorthands[0], "color":colors[0], "perc num":0, "melting point":melting_points[0]}]
+    
     for i in range(1, len(names)):
         prec_percnum = elements[i-1]["perc num"]
         new_perc_num = random.uniform(prec_percnum, 100 - (100 - prec_percnum) / element_perc_affinity)
-        elements.append({"name":names[i],"shorthand":shorthands[i], "color":colors[i], "perc num":new_perc_num})
+        elements.append({"name":names[i],"shorthand":shorthands[i], "color":colors[i], "perc num":new_perc_num, "melting point":melting_points[i]})
         
     elements.append(elements.pop(0)) #moving the first element at the top and filling the
     elements[-1]["perc num"] = 100   #last percentage gap assigning his perc num to 100
@@ -74,7 +75,7 @@ def generate_world(w, h, element_list=None, output="indirect"):
                 if y_in_curve_for_x(generator) < element.perc_num:
                     if output == "direct": #ideal for console output
                         raw.append(element.shorthand) #fills the matrix with the elements shorthand
-                    elif output == "indirect": #ideal for the next calculations
+                    elif output == "indirect": #ideal for the other calculations
                         raw.append(element) #fills the matrix with the elements themselves
                     break
                     
@@ -84,7 +85,7 @@ def generate_world(w, h, element_list=None, output="indirect"):
 
 
 if __name__ == '__main__':
-    V = (0,2,1) #version of the world (just for priming, to get the WorldVersion object use VERSION)
+    V = (0,2,2) #version of the world (just for priming, to get the WorldVersion object use VERSION)
     element_perc_affinity = 4 #lower this value (>1) to prevent very common and very rare elements
     
     if len(V) < 3:
@@ -94,6 +95,7 @@ if __name__ == '__main__':
     names = []
     shorthands = []
     colors = []
+    melting_points = []
 
     w = int(input("\n\ninsert grid width: "))
     h = w
@@ -116,9 +118,22 @@ if __name__ == '__main__':
         for i in range(0,elem_num):
             colors.append((random.randint(0,255),random.randint(0,255),random.randint(0,255)))
 
-    elements = create_element_list(names, shorthands, colors)
+    if input("\ndo you want to choose elements melting point? (y if you do): ") == "y": #sets the melting point of every element
+        for i in range(0,elem_num):
+            exec("melting_points.append((" + input('insert melting point of the element '+names[i]+' int: ') + "))")
+    else:
+        for i in range(0,elem_num):
+            melting_points.append(random.randint(-200,2000))
+
+    elements = create_element_list(names, shorthands, colors, melting_points)
     world = generate_world(w, h, elements) #*just to be saved in world_data otherwise if the same list is used for
                                            # both processing and saving a bug causing their overlap will occour
+    temperatures = []
+    for y in range(0,len(world)):
+        row = []
+        for x in range(0,len(world[0])):
+            row.append(0)
+        temperatures.append(row)
 
     world_data = {"version":VERSION.String,
                   "elements":elements,
@@ -130,6 +145,7 @@ if __name__ == '__main__':
                   "side":side,
                   "spacing":spacing,
                   "max particle ratio":max_particle_ratio,
-                  "world":world[:]}
+                  "world":world[:],
+                  "temperature":temperatures}
 
     save_progress(world_data,input("\n\ntype the world name: "))
